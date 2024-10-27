@@ -1,5 +1,6 @@
 # Ultralytics YOLO 🚀, AGPL-3.0 license
 
+import os
 import json
 import random
 import shutil
@@ -220,7 +221,7 @@ def coco80_to_coco91_class():
 
 def convert_coco(
     labels_dir="../coco/annotations/",
-    save_dir="coco_converted/",
+    save_dir="yolo_labels/",
     use_segments=False,
     use_keypoints=False,
     cls91to80=True,
@@ -259,8 +260,11 @@ def convert_coco(
     # Import json
     for json_file in sorted(Path(labels_dir).resolve().glob("*.json")):
         lname = "" if lvis else json_file.stem.replace("instances_", "")
-        fn = Path(save_dir) / "labels" / lname  # folder name
+        split = json_file.stem.replace("instances_", "")
+        fn = Path(save_dir) / "labels" / split  # folder name
+        fi = Path(save_dir) / "images" / split  # folder name
         fn.mkdir(parents=True, exist_ok=True)
+        fi.mkdir(parents=True, exist_ok=True)
         if lvis:
             # NOTE: create folders for both train and val in advance,
             # since LVIS val set contains images from COCO 2017 train in addition to the COCO 2017 val split.
@@ -320,8 +324,12 @@ def convert_coco(
                             box + (np.array(ann["keypoints"]).reshape(-1, 3) / np.array([w, h, 1])).reshape(-1).tolist()
                         )
 
-            # Write
-            with open((fn / f).with_suffix(".txt"), "a") as file:
+
+            # Write images
+            os.system(f"ln -s {f} {fi / Path(str(f).replace('/', '_'))}")
+
+            # Write labels
+            with open((fn / Path(str(f).replace('/', '_'))).with_suffix('.txt'), 'a') as file:
                 for i in range(len(bboxes)):
                     if use_keypoints:
                         line = (*(keypoints[i]),)  # cls, box, keypoints
